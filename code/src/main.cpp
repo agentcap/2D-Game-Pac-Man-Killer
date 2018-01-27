@@ -1,6 +1,7 @@
 #include "main.h"
 #include "timer.h"
 #include "ball.h"
+#include "ground.h"
 
 using namespace std;
 
@@ -13,8 +14,10 @@ GLFWwindow *window;
 **************************/
 
 Ball ball1, ball2;
+Ground underGround, topGround;
 
 float screen_zoom = 1, screen_center_x = 0, screen_center_y = 0;
+float screen_width = 20, screen_height = 10;
 
 Timer t60(1.0 / 60);
 
@@ -52,6 +55,8 @@ void draw() {
     // Scene render
     ball1.draw(VP);
     ball2.draw(VP);
+    underGround.draw(VP);
+    topGround.draw(VP);
 }
 
 void tick_input(GLFWwindow *window) {
@@ -80,6 +85,8 @@ void initGL(GLFWwindow *window, int width, int height) {
     ball1       = Ball(2, 0, COLOR_RED);
     ball2       = Ball(-2, 0, COLOR_RED);
     ball2.speed = -ball2.speed;
+    underGround = Ground(0, -4, 2.0, screen_width, COLOR_BROWN);
+    topGround   = Ground(0, -2.5, 1.0, screen_width, COLOR_GREEN);
 
     // Create and compile our GLSL program from the shaders
     programID = LoadShaders("Sample_GL.vert", "Sample_GL.frag");
@@ -105,7 +112,7 @@ void initGL(GLFWwindow *window, int width, int height) {
 
 int main(int argc, char **argv) {
     srand(time(0));
-    int width  = 600;
+    int width  = 1200;
     int height = 600;
 
     window = initGLFW(width, height);
@@ -140,9 +147,9 @@ bool detect_collision(bounding_box_t a, bounding_box_t b) {
 }
 
 void reset_screen() {
-    float top    = screen_center_y + 4 / screen_zoom;
-    float bottom = screen_center_y - 4 / screen_zoom;
-    float left   = screen_center_x - 4 / screen_zoom;
-    float right  = screen_center_x + 4 / screen_zoom;
+    float top    = screen_center_y + (screen_height/2) / screen_zoom;
+    float bottom = screen_center_y - (screen_height/2) / screen_zoom;
+    float left   = screen_center_x - (screen_width/2) / screen_zoom;
+    float right  = screen_center_x + (screen_width/2) / screen_zoom;
     Matrices.projection = glm::ortho(left, right, bottom, top, 0.1f, 500.0f);
 }
