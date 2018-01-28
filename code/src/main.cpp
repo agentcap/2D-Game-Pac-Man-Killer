@@ -2,6 +2,7 @@
 #include "timer.h"
 #include "ball.h"
 #include "ground.h"
+#include "player.h"
 
 using namespace std;
 
@@ -15,6 +16,7 @@ GLFWwindow *window;
 
 Ball ball1, ball2;
 Ground underGround, topGround;
+Player player;
 
 float screen_zoom = 1, screen_center_x = 0, screen_center_y = 0;
 float screen_width = 20, screen_height = 10;
@@ -57,6 +59,7 @@ void draw() {
     ball2.draw(VP);
     underGround.draw(VP);
     topGround.draw(VP);
+    player.draw(VP);
 }
 
 void tick_input(GLFWwindow *window) {
@@ -86,7 +89,10 @@ void initGL(GLFWwindow *window, int width, int height) {
     ball2       = Ball(-2, 0, COLOR_RED);
     ball2.speed = -ball2.speed;
     underGround = Ground(0, -4, 2.0, screen_width, COLOR_BROWN);
-    topGround   = Ground(0, -2.5, 1.0, screen_width, COLOR_GREEN);
+    topGround   = Ground(0, -2.75, 0.5, screen_width, COLOR_GREEN);
+
+    color_t rainbowColors[] = {COLOR_VIOLET,COLOR_INDIGO,COLOR_BLUE,COLOR_GREEN,COLOR_YELLOW,COLOR_ORANGE,COLOR_RED};
+    player = Player(2,2,1,rainbowColors,7);
 
     // Create and compile our GLSL program from the shaders
     programID = LoadShaders("Sample_GL.vert", "Sample_GL.frag");
