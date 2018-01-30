@@ -9,7 +9,16 @@ public:
     Player() {}
     Player(float x, float y, float r, color_t *colors, int noColors);
     glm::vec3 position;
+    float rotation;
+    float radius;
+    float speed;
     void draw(glm::mat4 VP);
+    void inc_position(float x, float y, float angle);
+    void move_left();
+    void move_right();
+    void tick();
+    void set_height(float y);
+    bounding_ball_t bounding_ball();
 private:
     VAO *object;
 };

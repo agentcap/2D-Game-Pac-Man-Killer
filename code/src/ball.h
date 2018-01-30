@@ -7,14 +7,15 @@
 class Ball {
 public:
     Ball() {}
-    Ball(float x, float y, color_t color);
+    Ball(float x, float y, float r, color_t color, float speed, float score);
     glm::vec3 position;
-    float rotation;
+    float radius;
+    float speed;
+    float score;
     void draw(glm::mat4 VP);
     void set_position(float x, float y);
     void tick();
-    double speed;
-    bounding_box_t bounding_box();
+    bounding_ball_t bounding_ball();
 private:
     VAO *object;
 };
