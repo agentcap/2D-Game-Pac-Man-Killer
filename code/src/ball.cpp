@@ -4,9 +4,9 @@
 
 Ball::Ball(float x, float y, float r, color_t color, float speed, float score) {
     this->position = glm::vec3(x, y, 0);
-    this->radius = r;
-    this->speed = speed;
-    this->score = score;
+    this->radius   = r;
+    this->speed    = speed;
+    this->score    = score;
 
     int theta = 1, angle = 0;
     int size = (360.0/theta)*9;
@@ -34,10 +34,10 @@ Ball::Ball(float x, float y, float r, color_t color, float speed, float score) {
 }
 
 void Ball::draw(glm::mat4 VP) {
-    Matrices.model = glm::mat4(1.0f);
+    Matrices.model      = glm::mat4(1.0f);
     glm::mat4 translate = glm::translate (this->position);    // glTranslatef
-    Matrices.model *= (translate);
-    glm::mat4 MVP = VP * Matrices.model;
+    Matrices.model     *= (translate);
+    glm::mat4 MVP       = VP * Matrices.model;
     glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
     draw3DObject(this->object);
 }

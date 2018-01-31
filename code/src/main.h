@@ -82,6 +82,8 @@ void create_ground(float height);
 bool detect_ground(bounding_ball_t player);
 void generate_balls();
 void remove_balls(float right_bound);
+void remove_slopes(float right_bound);
+bool detect_collision(bounding_ball_t player, bounding_ball_t ball, float speed);
 
 extern float screen_zoom, screen_center_x, screen_center_y;
 void reset_screen();

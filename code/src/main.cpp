@@ -3,6 +3,8 @@
 #include "ball.h"
 #include "ground.h"
 #include "player.h"
+#include "slope.h"
+#include "trampoline.h"
 
 using namespace std;
 
@@ -16,7 +18,9 @@ GLFWwindow *window;
 
 Ground underGround, foreGround;
 Player player;
+Trampoline trampoline;
 vector<Ball> flying_balls;
+vector<Slope> slopes;
 
 
 float gravity = 0.01;
@@ -76,6 +80,13 @@ void draw() {
     for(int i=0;i<flying_balls.size();i++) {
         flying_balls[i].draw(VP);
     }
+
+    // Drawing the
+    for(int i=0;i<slopes.size();i++) {
+        slopes[i].draw(VP);
+    }
+
+    trampoline.draw(VP);
 }
 
 void tick_input(GLFWwindow *window) {
@@ -90,22 +101,68 @@ void tick_input(GLFWwindow *window) {
 }
 
 void tick_elements() {
-    player.speed -= gravity;
+
+    player.speed_v -= gravity;
     player.tick();
+
+    // Detecting collision with slopes and removing them
+    for(int i=0;i<slopes.size();i++) {
+        if(slopes[i].detect_collision(player.bounding_ball(),player.speed_v)) {
+            slopes.erase(slopes.begin()+i);
+            i--;
+        }
+    }
+
+    // Detecting Collision with flying balls, giving the boost and removing the balls
+    for(int i=0;i<flying_balls.size();i++) {
+        if(detect_collision(player.bounding_ball(),flying_balls[i].bounding_ball(),player.speed_v)) {
+            player.speed_v = 0.2;
+            flying_balls.erase(flying_balls.begin()+i);
+            i--;
+        }
+    }
+
+    // Detecting collision with trampoline from top direction and adjusting the height
+    if(trampoline.detect_up_collision(player.bounding_ball(), player.speed_v)) {
+        player.set_height(trampoline.base + trampoline.height + player.radius);
+        player.speed_v = min(0.4,-player.speed_v + 0.03);
+    }
+
+    // Detecting collision with trampoline from left direction and adjusting the position
+    else if(trampoline.detect_left_collision(player.bounding_ball())) {
+        player.position.x = trampoline.position.x - trampoline.radius - trampoline.width - player.radius;
+    }
+
+    // Detecting collision with trampoline from right direction and adjusting the position
+    else if(trampoline.detect_right_collision(player.bounding_ball())) {
+        player.position.x = trampoline.position.x + trampoline.radius + trampoline.width + player.radius;
+    }
 
     // Moving the flying objects
     for(int i=0;i<flying_balls.size();i++) {
         flying_balls[i].tick();
     }
 
+    // Moving the Slopes
+    for(int i=0;i<slopes.size();i++) {
+        slopes[i].tick();
+    }
+
+
+    // If player is on ground setting the speed to zero and adjusting the height
     if(detect_ground(player.bounding_ball())) {
         player.set_height(ground_level+player.radius);
-        player.speed = 0;
+        player.speed_v = 0;
     }
 }
 
-void detect_collision(bounding_ball_t player, bounding_ball_t ball) {
-//    if (player.)
+/* Function return true if there is a collision between player and ball
+ * and the player is moving downwards */
+bool detect_collision(bounding_ball_t player, bounding_ball_t ball, float speed) {
+    return ((player.x-ball.x)*(player.x-ball.x) +
+            (player.y-ball.y)*(player.y-ball.y) <=
+            (player.radius + ball.radius)*(player.radius + ball.radius))
+            && player.y > ball.y && speed <= 0;
 }
 
 /* Initialize the OpenGL rendering properties */
@@ -119,6 +176,8 @@ void initGL(GLFWwindow *window, int width, int height) {
     // Create Player with rainbow colors
     color_t rainbowColors[] = {COLOR_VIOLET,COLOR_INDIGO,COLOR_BLUE,COLOR_GREEN,COLOR_YELLOW,COLOR_ORANGE,COLOR_RED};
     player = Player(2, ground_level + 0.3, 0.3, rainbowColors,7);
+
+    trampoline = Trampoline(8,1,1.5,ground_level,0.2,COLOR_GREEN);
 
     /*
      *
@@ -182,8 +241,9 @@ int main(int argc, char **argv) {
             // Swap Frame Buffer in double buffering
             glfwSwapBuffers(window);
 
-            if(t2.processTick()) generate_balls();
+//            if(t2.processTick()) generate_balls();
             remove_balls(screen_width/2);
+            remove_slopes(screen_width/2);
             tick_elements();
             tick_input(window);
         }
@@ -198,7 +258,7 @@ int main(int argc, char **argv) {
 /* Increses speed of the player by 0.3 when on ground */
 void jump_player() {
     if(player.position.y == ground_level + player.radius) {
-        player.speed += 0.3;
+        player.speed_v = 0.3;
     }
 }
 
@@ -233,6 +293,16 @@ void generate_balls() {
 
     Ball ball = Ball(x,y,radius,ball_t.color,ball_t.speed,ball_t.score);
 
+    // Attach a slope randomly to the ball with probability of 0.2
+    if(rand()%5 == 0) {
+//        int angle  = rand()%180;
+        int angle = 45;
+        float height = 3;
+        float width  = 0.5;
+        Slope slope = Slope(ball.bounding_ball(),height,width,angle,ball.speed);
+        slopes.push_back(slope);
+    }
+
     flying_balls.push_back(ball);
 }
 
@@ -243,6 +313,16 @@ void remove_balls(float right_bound) {
         float x = flying_balls[i].position.x;
         if (x > right_bound) {
             flying_balls.erase(flying_balls.begin()+i);
+            i--;
+        }
+    }
+}
+
+void remove_slopes(float right_bound) {
+    for (int i=0;i<slopes.size();i++) {
+        float x = slopes[i].position.x;
+        if (x > right_bound) {
+            slopes.erase(slopes.begin()+i);
             i--;
         }
     }

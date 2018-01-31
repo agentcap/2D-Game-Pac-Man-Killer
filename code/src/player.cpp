@@ -3,10 +3,11 @@
 #define PI 3.14159265
 
 Player::Player(float x, float y, float r, color_t *colors, int noColors) {
-    this->position = glm::vec3(x, y, 0);
-    this->rotation = 0.0;
-    this->radius  = r;
-    this->speed = 0;
+    this->position  = glm::vec3(x, y, 0);
+    this->rotation  = 0.0;
+    this->radius    = r;
+    this->speed_h   = 0;
+    this->speed_v   = 0;
 
     int theta = 1, angle = 0;
     int size = (360.0/theta)*9;
@@ -71,15 +72,16 @@ void Player::inc_position(float x, float y, float angle) {
 }
 
 void Player::move_left() {
-    inc_position(-0.2,0,10);
+    inc_position(-0.1,0,10);
 }
 
 void Player::move_right() {
-    inc_position(0.2,0,-10);
+    inc_position(0.1,0,-10);
 }
 
 void Player::tick() {
-    this->position.y += speed;
+    this->position.x += speed_h;
+    this->position.y += speed_v;
 }
 
 bounding_ball_t Player::bounding_ball() {
