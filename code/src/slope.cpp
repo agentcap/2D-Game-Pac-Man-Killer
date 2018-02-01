@@ -48,7 +48,7 @@ bool Slope::detect_collision(bounding_ball_t player, float speed) {
     float center_y = this->position.y + (this->radius + this->width/2)*(float)std::sin(this->rotation);
 
     glm::vec3 trans = trans_cord(glm::vec3(x,y,0),glm::vec3(center_x,center_y,0),-(90-this->rotation));
-    return (std::abs(trans.y) <= this->width/2 && std::abs(trans.x) <= this->height && speed <= 0);
+    return (std::abs(trans.y) <= this->width && std::abs(trans.x) <= this->height && speed <= 0);
 }
 
 glm::vec3 trans_cord(glm::vec3 pos, glm::vec3 origin,float angle) {

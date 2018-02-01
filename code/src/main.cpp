@@ -7,6 +7,7 @@
 #include "trampoline.h"
 #include "spike.h"
 #include "pond.h"
+#include "magnet.h"
 
 using namespace std;
 
@@ -26,6 +27,7 @@ vector<Ball> flying_balls;
 vector<Slope> slopes;
 vector<Spike> spikes;
 Pond pond;
+Magnet magnet;
 
 // Types of Flying Balls
 vector<flying_ball_t> ball_types;
@@ -50,6 +52,7 @@ bool jump = false;
 // t2   - Ball Generation Rate
 Timer t60(1.0 / 60);
 Timer t2(1.0 /2);
+Timer t5(5.0);
 
 /* Render the scene with openGL */
 /* Edit this function according to your assignment */
@@ -89,6 +92,9 @@ void draw() {
     underGround.draw(VP);
     foreGround.draw(VP);
 
+    // Drawing the magnet
+    if(magnet.active) magnet.draw(VP);
+
     // Drawing the flying Objects
     for(int i=0;i<flying_balls.size();i++) {
         flying_balls[i].draw(VP);
@@ -110,7 +116,7 @@ void draw() {
     // Drawing the player
     player.draw(VP);
 
-    //Drawing the Trampoline
+    // Drawing the Trampoline
     trampoline.draw(VP);
 }
 
@@ -161,6 +167,7 @@ void tick_elements() {
      *
      */
 
+    magnet.tick();
     if(pond.is_in_water(player.bounding_ball())) {
         gravity = 0.005;
         if(!jump)player.speed_v = -0.01;
@@ -170,10 +177,12 @@ void tick_elements() {
         jump = false;
         gravity = 0.01;
         player.speed_v -= gravity;
+        if(magnet.active) player.speed_h += magnet.acceleration;
+        else player.speed_h = 0.0;
     }
 
     // Moving the player downwards only if player is not moving up the pool
-    if(!moved_in_water) player.tick();
+    if(!moved_in_water) player.tick(ground_level);
 
     // Detecting collision with slopes and removing them
     for(int i=0;i<slopes.size();i++) {
@@ -274,6 +283,7 @@ void initGL(GLFWwindow *window, int width, int height) {
     Spike spike = Spike(-7,ground_level,0.5,2,5,0.005,0.1,COLOR_YELLOW);
     spikes.push_back(spike);
     pond = Pond(-2,ground_level,2,0.5,COLOR_BLUE);
+    magnet = Magnet(-8,3,1,0.5,0.5,0.0005,3.0);
 
 
     /*
@@ -330,7 +340,9 @@ int main(int argc, char **argv) {
 
     initGL (window, width, height);
 
+
     /* Draw in loop */
+    int tag = 0;
     while (!glfwWindowShouldClose(window)) {
         // Process timers
 
@@ -342,6 +354,12 @@ int main(int argc, char **argv) {
             glfwSwapBuffers(window);
 
             if(t2.processTick()) generate_balls();
+            if(t5.processTick()) {
+                if(rand()%2) {
+                    magnet.activate(-8,3,0.0);
+                }
+                else magnet.activate(8,3,180.0);
+            }
             remove_balls(screen_width/2);
             remove_slopes(screen_width/2);
             tick_elements();
@@ -396,7 +414,7 @@ void generate_balls() {
 
     // Attach a slope randomly to the ball with probability of 0.2
     if(rand()%5 == 0) {
-//        int angle  = rand()%180;
+//        int angle  = rand()%90;
         int angle = 45;
         float height = 3;
         float width  = 0.5;

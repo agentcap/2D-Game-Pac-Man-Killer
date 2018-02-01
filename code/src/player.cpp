@@ -79,9 +79,9 @@ void Player::move_right() {
     inc_position(0.1,0,-10);
 }
 
-void Player::tick() {
-    this->position.x += speed_h;
-    this->position.y += speed_v;
+void Player::tick(float ground_level) {
+    if(this->position.y>ground_level+this->radius)this->position.x += this->speed_h;
+    this->position.y += this->speed_v;
 }
 
 bounding_ball_t Player::bounding_ball() {

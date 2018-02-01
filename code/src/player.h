@@ -17,7 +17,7 @@ public:
     void inc_position(float x, float y, float angle);
     void move_left();
     void move_right();
-    void tick();
+    void tick(float ground_level);
     void set_height(float y);
     bounding_ball_t bounding_ball();
 private:
