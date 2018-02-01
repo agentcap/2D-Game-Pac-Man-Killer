@@ -178,19 +178,20 @@ void tick_elements() {
         gravity = 0.01;
         player.speed_v -= gravity;
         if(magnet.active) player.speed_h += magnet.acceleration;
-        else player.speed_h = 0.0;
+    }
+
+
+    // Detecting collision with slopes and removing them
+    for(int i=0;i<slopes.size();i++) {
+        if(slopes[i].detect_collision(player.bounding_ball(),player.speed_v,player.speed_h)) {
+            glm::vec3 temp = slopes[i].new_speed(player.speed_h,player.speed_v);
+            player.speed_h = temp.x;
+            player.speed_v = temp.y;
+        }
     }
 
     // Moving the player downwards only if player is not moving up the pool
     if(!moved_in_water) player.tick(ground_level);
-
-    // Detecting collision with slopes and removing them
-    for(int i=0;i<slopes.size();i++) {
-        if(slopes[i].detect_collision(player.bounding_ball(),player.speed_v)) {
-            slopes.erase(slopes.begin()+i);
-            i--;
-        }
-    }
 
     // Detecting Collision with flying balls, giving the boost and removing the balls
     for(int i=0;i<flying_balls.size();i++) {
@@ -248,12 +249,14 @@ void tick_elements() {
             player.position.x = pond.set_x_boundary(player.bounding_ball());
             player.speed_v = 0;
         }
+        player.speed_h = 0;
     }
 
     // If player is on ground setting the speed to zero and adjusting the height
     else if(detect_ground(player.bounding_ball())) {
         player.set_height(ground_level+player.radius);
         player.speed_v = 0;
+        player.speed_h = 0;
     }
 
 }
@@ -414,10 +417,10 @@ void generate_balls() {
 
     // Attach a slope randomly to the ball with probability of 0.2
     if(rand()%5 == 0) {
-//        int angle  = rand()%90;
-        int angle = 45;
+        int angle  = 30 + rand()%120;
+//        int angle = 45;
         float height = 3;
-        float width  = 0.5;
+        float width  = 0.25;
         Slope slope = Slope(ball.bounding_ball(),height,width,angle,ball.speed);
         slopes.push_back(slope);
     }

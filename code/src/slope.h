@@ -8,9 +8,10 @@ class Slope {
 public:
     Slope();
     Slope(bounding_ball_t ball, float height, float width, float rotation, float speed);
-    bool detect_collision(bounding_ball_t player, float speed);
+    bool detect_collision(bounding_ball_t player, float speed_v, float speed_h);
     void draw(glm::mat4 VP);
     void tick();
+    glm::vec3 new_speed(float vx, float vy);
     glm::vec3 position;
     float rotation;
     float speed;

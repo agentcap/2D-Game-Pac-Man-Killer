@@ -40,15 +40,23 @@ void Slope::tick() {
     this->position.x += speed;
 }
 
-bool Slope::detect_collision(bounding_ball_t player, float speed) {
-    float x = player.x + player.radius * (float)std::cos(180+this->rotation);
-    float y = player.y + player.radius * (float)std::sin(180+this->rotation);
+bool Slope::detect_collision(bounding_ball_t player, float speed_v,float speed_h) {
+    float x = player.x + player.radius * (float)std::cos(180+this->rotation*M_PI/180.0f);
+    float y = player.y + player.radius * (float)std::sin(180+this->rotation*M_PI/180.0f);
 
-    float center_x = this->position.x + (this->radius + this->width/2)*(float)std::cos(this->rotation);
-    float center_y = this->position.y + (this->radius + this->width/2)*(float)std::sin(this->rotation);
+    float center_x = this->position.x + (this->radius + this->width/2)*(float)std::cos(this->rotation*M_PI/180.0f);
+    float center_y = this->position.y + (this->radius + this->width/2)*(float)std::sin(this->rotation*M_PI/180.0f);
 
     glm::vec3 trans = trans_cord(glm::vec3(x,y,0),glm::vec3(center_x,center_y,0),-(90-this->rotation));
-    return (std::abs(trans.y) <= this->width && std::abs(trans.x) <= this->height && speed <= 0);
+
+//    return (std::abs(trans.y) <= this->width/2 && std::abs(trans.x) <= this->height/2 && speed_v <= 0);
+    x = player.x-speed_h + player.radius * (float)std::cos(180+this->rotation*M_PI/180.0f);
+    y = player.y-speed_v + player.radius * (float)std::sin(180+this->rotation*M_PI/180.0f);
+
+   glm::vec3 trans_before = trans_cord(glm::vec3(x,y,0),glm::vec3(center_x,center_y,0),-(90-this->rotation));
+
+    return ((std::abs(trans.y) <= this->width/2 && std::abs(trans.x) <= this->height/2 && speed_v <= 0)||
+            (trans_before.y) > this->width/2 && trans.y < -this->width/2 && std::abs(trans.x) <= this->height/2 && speed_v <= 0);
 }
 
 glm::vec3 trans_cord(glm::vec3 pos, glm::vec3 origin,float angle) {
@@ -57,9 +65,28 @@ glm::vec3 trans_cord(glm::vec3 pos, glm::vec3 origin,float angle) {
 
     glm::vec3 cord;
 
-    cord.x = x * (float)std::cos(angle) + y * (float)std::sin(angle);
-    cord.y = -x * (float)std::sin(angle) + y * (float)std::cos(angle);
+    cord.x = x * (float)std::cos(angle*M_PI/180.f) + y * (float)std::sin(angle*M_PI/180.0f);
+    cord.y = -x * (float)std::sin(angle*M_PI/180.f) + y * (float)std::cos(angle*M_PI/180.0f);
     cord.z = 0;
 
     return cord;
+}
+
+glm::vec3 Slope::new_speed(float vx, float vy) {
+    if(this->rotation < 90) {
+        vx = -std::min(vx,0.00f);
+        vy = -std::min(vy,0.001f);
+        float VX = vx*std::cos(2* this->rotation * M_PI/180.0f) + vy*std::sin(2*this->rotation * M_PI/180.0f);
+        float VY = vy*std::cos(2* this->rotation * M_PI/180.0f) - vx*std::sin(2*this->rotation * M_PI/180.0f);
+
+        return glm::vec3(VX,-VY,0);
+    }
+    else {
+        vx = std::max(vx,0.00f);
+        vy = -std::min(vy,0.001f);
+        float VX = vx*std::cos(2* this->rotation * M_PI/180.0f) + vy*std::sin(2*this->rotation * M_PI/180.0f);
+        float VY = vy*std::cos(2* this->rotation * M_PI/180.0f) - vx*std::sin(2*this->rotation * M_PI/180.0f);
+
+        return glm::vec3(VX,-VY,0);
+    }
 }
