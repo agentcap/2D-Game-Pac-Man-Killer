@@ -50,7 +50,6 @@ void Ball::tick() {
     this->position.x += speed;
 }
 
-
 bounding_ball_t Ball::bounding_ball() {
     float x = this->position.x, y = this->position.y, r = this->radius;
     bounding_ball_t bball = { x, y, r};

@@ -5,6 +5,8 @@
 #include "player.h"
 #include "slope.h"
 #include "trampoline.h"
+#include "spike.h"
+#include "pond.h"
 
 using namespace std;
 
@@ -16,15 +18,21 @@ GLFWwindow *window;
 * Customizable functions *
 **************************/
 
+// Objects in the game
 Ground underGround, foreGround;
 Player player;
 Trampoline trampoline;
 vector<Ball> flying_balls;
 vector<Slope> slopes;
+vector<Spike> spikes;
+Pond pond;
 
+// Types of Flying Balls
+vector<flying_ball_t> ball_types;
 
 float gravity = 0.01;
 
+// Setting the screen dimensions and zoom level.
 float screen_zoom = 1, screen_center_x = 0, screen_center_y = 0;
 float screen_width = 20, screen_height = 10;
 
@@ -32,9 +40,14 @@ float screen_width = 20, screen_height = 10;
 float ground_height = screen_height/5;
 float ground_level = -screen_height/2+ground_height;
 
-// Types of Flying Balls
-vector<flying_ball_t> ball_types;
 
+// moved_in_water => detects whether the player is moved up
+// along the curvature of the pool
+bool moved_in_water = false;
+bool jump = false;
+
+// t60  - Frame rate of the game
+// t2   - Ball Generation Rate
 Timer t60(1.0 / 60);
 Timer t2(1.0 /2);
 
@@ -72,38 +85,95 @@ void draw() {
     // Scene render
 
 
+    // Drawing the Ground layers
     underGround.draw(VP);
     foreGround.draw(VP);
-    player.draw(VP);
 
     // Drawing the flying Objects
     for(int i=0;i<flying_balls.size();i++) {
         flying_balls[i].draw(VP);
     }
 
-    // Drawing the
+    // Drawing the slopes
     for(int i=0;i<slopes.size();i++) {
         slopes[i].draw(VP);
     }
 
+    // Drawing the Spikes
+    for(int i=0;i<spikes.size();i++) {
+        spikes[i].draw(VP);
+    }
+
+    // Drawing the pond
+    pond.draw(VP);
+
+    // Drawing the player
+    player.draw(VP);
+
+    //Drawing the Trampoline
     trampoline.draw(VP);
 }
 
 void tick_input(GLFWwindow *window) {
     int left  = glfwGetKey(window, GLFW_KEY_A);
     int right = glfwGetKey(window, GLFW_KEY_D);
+
+    moved_in_water = false;
     if (left) {
-        player.move_left();
+        /*
+         *
+         * Change the step length in water
+         *
+         */
+        // Moving the player according to the environment
+        if(!pond.is_in_water(player.bounding_ball())) player.move_left();
+        else player.position.x -= 0.05;
+
+        // If the player is in water and is on boundaries, setting the y coordiante according to the curvature.
+        if(pond.is_in_water(player.bounding_ball()) && pond.is_out(player.bounding_ball())) {
+            player.position.y = pond.set_y_boundary(player.bounding_ball());
+            moved_in_water = true;
+        }
     }
     if (right) {
-        player.move_right();
+        /*
+         *
+         * Change the step length in water
+         *
+         */
+        // Moving the player according to the environment
+        if(!pond.is_in_water(player.bounding_ball())) player.move_right();
+        else player.position.x += 0.05;
+
+        // If the player is in water and is on boundaries, setting the y coordiante according to the curvature.
+        if(pond.is_in_water(player.bounding_ball()) && pond.is_out(player.bounding_ball())) {
+            player.position.y = pond.set_y_boundary(player.bounding_ball());
+            moved_in_water = true;
+        }
     }
 }
 
 void tick_elements() {
 
-    player.speed_v -= gravity;
-    player.tick();
+    /*
+     *
+     * Change the values of the step length and speed acording to the environment
+     *
+     */
+
+    if(pond.is_in_water(player.bounding_ball())) {
+        gravity = 0.005;
+        if(!jump)player.speed_v = -0.01;
+        else player.speed_v = 0.2;
+    }
+    else {
+        jump = false;
+        gravity = 0.01;
+        player.speed_v -= gravity;
+    }
+
+    // Moving the player downwards only if player is not moving up the pool
+    if(!moved_in_water) player.tick();
 
     // Detecting collision with slopes and removing them
     for(int i=0;i<slopes.size();i++) {
@@ -138,6 +208,14 @@ void tick_elements() {
         player.position.x = trampoline.position.x + trampoline.radius + trampoline.width + player.radius;
     }
 
+    // Detecting collision with spikes
+    for(int i=0;i<spikes.size();i++) {
+        if(spikes[i].detect_collision(player.bounding_ball())) {
+            spikes.erase(spikes.begin()+i);
+            i--;
+        }
+    }
+
     // Moving the flying objects
     for(int i=0;i<flying_balls.size();i++) {
         flying_balls[i].tick();
@@ -148,12 +226,27 @@ void tick_elements() {
         slopes[i].tick();
     }
 
+    // Oscillating the Spikes
+    for(int i=0;i<spikes.size();i++) {
+        spikes[i].tick();
+    }
+
+    if(pond.is_in_water(player.bounding_ball())) {
+        if(player.position.y <= pond.position.y-pond.radius + player.radius && player.position.x == pond.position.x) {
+            player.position.y = pond.position.y - pond.radius + player.radius;
+        }
+        else if(pond.is_out(player.bounding_ball())) {
+            player.position.x = pond.set_x_boundary(player.bounding_ball());
+            player.speed_v = 0;
+        }
+    }
 
     // If player is on ground setting the speed to zero and adjusting the height
-    if(detect_ground(player.bounding_ball())) {
+    else if(detect_ground(player.bounding_ball())) {
         player.set_height(ground_level+player.radius);
         player.speed_v = 0;
     }
+
 }
 
 /* Function return true if there is a collision between player and ball
@@ -178,6 +271,10 @@ void initGL(GLFWwindow *window, int width, int height) {
     player = Player(2, ground_level + 0.3, 0.3, rainbowColors,7);
 
     trampoline = Trampoline(8,1,1.5,ground_level,0.2,COLOR_GREEN);
+    Spike spike = Spike(-7,ground_level,0.5,2,5,0.005,0.1,COLOR_YELLOW);
+    spikes.push_back(spike);
+    pond = Pond(-2,ground_level,2,0.5,COLOR_BLUE);
+
 
     /*
      *
@@ -197,6 +294,9 @@ void initGL(GLFWwindow *window, int width, int height) {
     type1.score = 100;
     ball_types.push_back(type1);
     type1.color = COLOR_ORANGE;
+    type1.speed = 0.06;
+    ball_types.push_back(type1);
+    type1.color = COLOR_VIOLET;
     type1.speed = 0.06;
     ball_types.push_back(type1);
 
@@ -241,7 +341,7 @@ int main(int argc, char **argv) {
             // Swap Frame Buffer in double buffering
             glfwSwapBuffers(window);
 
-//            if(t2.processTick()) generate_balls();
+            if(t2.processTick()) generate_balls();
             remove_balls(screen_width/2);
             remove_slopes(screen_width/2);
             tick_elements();
@@ -257,7 +357,8 @@ int main(int argc, char **argv) {
 
 /* Increses speed of the player by 0.3 when on ground */
 void jump_player() {
-    if(player.position.y == ground_level + player.radius) {
+    jump = true;
+    if(player.position.y == ground_level + player.radius || pond.is_in_water(player.bounding_ball())) {
         player.speed_v = 0.3;
     }
 }
