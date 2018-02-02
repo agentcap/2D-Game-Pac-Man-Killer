@@ -5,6 +5,7 @@
 #include <cmath>
 #include <fstream>
 #include <vector>
+#include <bits/stdc++.h>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -85,8 +86,16 @@ void remove_balls(float right_bound);
 void remove_slopes(float right_bound);
 bool detect_collision(bounding_ball_t player, bounding_ball_t ball, float speed);
 
+void generate_trampolines();
+void generate_spikes();
+void generate_ponds();
+void generate_ball_types();
+
+
 extern float screen_zoom, screen_center_x, screen_center_y;
 void reset_screen();
+void zoom_out();
+void zoom_in();
 
 // ---- Colors ----
 //extern const color_t COLOR_RED;

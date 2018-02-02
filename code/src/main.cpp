@@ -22,12 +22,15 @@ GLFWwindow *window;
 // Objects in the game
 Ground underGround, foreGround;
 Player player;
-Trampoline trampoline;
+vector<Trampoline> trampolines;
 vector<Ball> flying_balls;
 vector<Slope> slopes;
 vector<Spike> spikes;
-Pond pond;
+vector<Pond> ponds;
 Magnet magnet;
+
+int score = 0;
+int level = 5;
 
 // Types of Flying Balls
 vector<flying_ball_t> ball_types;
@@ -74,7 +77,7 @@ void draw() {
     // Compute Camera matrix (view)
     // Matrices.view = glm::lookAt( eye, target, up ); // Rotating Camera for 3D
     // Don't change unless you are sure!!
-    Matrices.view = glm::lookAt(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)); // Fixed camera for 2D (ortho) in XY plane
+    Matrices.view = glm::lookAt(glm::vec3(screen_center_x, screen_center_y, 3), glm::vec3(screen_center_x, screen_center_y, 0), glm::vec3(0, 1, 0)); // Fixed camera for 2D (ortho) in XY plane
 
     // Compute ViewProject matrix as view/camera might not be changed for this frame (basic scenario)
     // Don't change unless you are sure!!
@@ -93,7 +96,11 @@ void draw() {
     foreGround.draw(VP);
 
     // Drawing the magnet
-    if(magnet.active) magnet.draw(VP);
+    if(magnet.active) {
+        if(magnet.rotation == 0.0) magnet.position.x = screen_center_x - 8.0*screen_zoom;
+        else magnet.position.x = screen_center_x + 8.0*screen_zoom;
+        magnet.draw(VP);
+    }
 
     // Drawing the flying Objects
     for(int i=0;i<flying_balls.size();i++) {
@@ -105,61 +112,85 @@ void draw() {
         slopes[i].draw(VP);
     }
 
-    // Drawing the Spikes
-    for(int i=0;i<spikes.size();i++) {
-        spikes[i].draw(VP);
+    if(level>2) {
+        // Drawing the Spikes
+        for(int i=0;i<spikes.size();i++) {
+            spikes[i].draw(VP);
+        }
     }
 
     // Drawing the pond
-    pond.draw(VP);
+    for(int i=0;i<ponds.size();i++) {
+        ponds[i].draw(VP);
+    }
 
     // Drawing the player
     player.draw(VP);
 
     // Drawing the Trampoline
-    trampoline.draw(VP);
+    for(int i=0;i<trampolines.size();i++) {
+        trampolines[i].draw(VP);
+    }
 }
 
 void tick_input(GLFWwindow *window) {
-    int left  = glfwGetKey(window, GLFW_KEY_A);
-    int right = glfwGetKey(window, GLFW_KEY_D);
+    int left        = glfwGetKey(window, GLFW_KEY_A);
+    int right       = glfwGetKey(window, GLFW_KEY_D);
+    int paneRight   = glfwGetKey(window, GLFW_KEY_RIGHT);
+    int paneLeft    = glfwGetKey(window, GLFW_KEY_LEFT);
+    int paneDown    = glfwGetKey(window, GLFW_KEY_DOWN);
+    int paneUp    = glfwGetKey(window, GLFW_KEY_UP);
 
     moved_in_water = false;
+    if(paneLeft) screen_center_x -= 0.05;
+    if(paneRight) screen_center_x += 0.05;
+    if(paneDown) screen_center_y -= 0.05;
+    if(paneUp) screen_center_y += 0.05;
+
     if (left) {
-        /*
-         *
-         * Change the step length in water
-         *
-         */
         // Moving the player according to the environment
-        if(!pond.is_in_water(player.bounding_ball())) player.move_left();
-        else player.position.x -= 0.05;
+        bool in_water = false;
+        for(int i=0;i<ponds.size();i++) {
+            if(!ponds[i].is_in_water(player.bounding_ball())) {
+                player.move_left();
+                in_water = true;
+            }
+        }
+        if(!in_water) player.position.x -= 0.05;
 
         // If the player is in water and is on boundaries, setting the y coordiante according to the curvature.
-        if(pond.is_in_water(player.bounding_ball()) && pond.is_out(player.bounding_ball())) {
-            player.position.y = pond.set_y_boundary(player.bounding_ball());
-            moved_in_water = true;
+        for(int i=0;i<ponds.size();i++) {
+            if(ponds[i].is_in_water(player.bounding_ball()) && ponds[i].is_out(player.bounding_ball())) {
+                player.position.y = ponds[i].set_y_boundary(player.bounding_ball());
+                moved_in_water = true;
+            }
         }
     }
     if (right) {
-        /*
-         *
-         * Change the step length in water
-         *
-         */
         // Moving the player according to the environment
-        if(!pond.is_in_water(player.bounding_ball())) player.move_right();
-        else player.position.x += 0.05;
+        bool in_water = false;
+        for(int i=0;i<ponds.size();i++) {
+            if(!ponds[i].is_in_water(player.bounding_ball())) {
+                player.move_right();
+                in_water = true;
+            }
+        }
+        if(!in_water) player.position.x += 0.05;
 
         // If the player is in water and is on boundaries, setting the y coordiante according to the curvature.
-        if(pond.is_in_water(player.bounding_ball()) && pond.is_out(player.bounding_ball())) {
-            player.position.y = pond.set_y_boundary(player.bounding_ball());
-            moved_in_water = true;
+        for(int i=0;i<ponds.size();i++) {
+            if(ponds[i].is_in_water(player.bounding_ball()) && ponds[i].is_out(player.bounding_ball())) {
+                player.position.y = ponds[i].set_y_boundary(player.bounding_ball());
+                moved_in_water = true;
+            }
         }
     }
 }
 
 void tick_elements() {
+    if(score > 40) level = 2;
+    if(score > 80) level = 3;
+    if(score > 120) level = 4;
 
     /*
      *
@@ -168,12 +199,16 @@ void tick_elements() {
      */
 
     magnet.tick();
-    if(pond.is_in_water(player.bounding_ball())) {
-        gravity = 0.005;
-        if(!jump)player.speed_v = -0.01;
-        else player.speed_v = 0.2;
+    bool in_water = false;
+    for(int i=0;i<ponds.size();i++) {
+        if(ponds[i].is_in_water(player.bounding_ball())) {
+            gravity = 0.005;
+            if(!jump)player.speed_v = -0.01;
+            else player.speed_v = 0.2;
+            in_water = true;
+        }
     }
-    else {
+    if(!in_water){
         jump = false;
         gravity = 0.01;
         player.speed_v -= gravity;
@@ -181,7 +216,7 @@ void tick_elements() {
     }
 
 
-    // Detecting collision with slopes and removing them
+    // Detecting collision with slopes
     for(int i=0;i<slopes.size();i++) {
         if(slopes[i].detect_collision(player.bounding_ball(),player.speed_v,player.speed_h)) {
             glm::vec3 temp = slopes[i].new_speed(player.speed_h,player.speed_v);
@@ -197,32 +232,41 @@ void tick_elements() {
     for(int i=0;i<flying_balls.size();i++) {
         if(detect_collision(player.bounding_ball(),flying_balls[i].bounding_ball(),player.speed_v)) {
             player.speed_v = 0.2;
+            score += flying_balls[i].score;
             flying_balls.erase(flying_balls.begin()+i);
             i--;
+
+            // Playing sound
+            system(" canberra-gtk-play -f  ../music/magnet.wav --volume=\"1\"   &");
         }
     }
 
     // Detecting collision with trampoline from top direction and adjusting the height
-    if(trampoline.detect_up_collision(player.bounding_ball(), player.speed_v)) {
-        player.set_height(trampoline.base + trampoline.height + player.radius);
-        player.speed_v = min(0.4,-player.speed_v + 0.03);
-    }
+    for(int i=0;i<trampolines.size();i++) {
+        if(trampolines[i].detect_up_collision(player.bounding_ball(), player.speed_v)) {
+            player.set_height(trampolines[i].base + trampolines[i].height + player.radius);
+            player.speed_v = min(0.4,-player.speed_v + 0.03);
+        }
 
-    // Detecting collision with trampoline from left direction and adjusting the position
-    else if(trampoline.detect_left_collision(player.bounding_ball())) {
-        player.position.x = trampoline.position.x - trampoline.radius - trampoline.width - player.radius;
-    }
+        // Detecting collision with trampoline from left direction and adjusting the position
+        else if(trampolines[i].detect_left_collision(player.bounding_ball())) {
+            player.position.x = trampolines[i].position.x - trampolines[i].radius - trampolines[i].width - player.radius;
+        }
 
-    // Detecting collision with trampoline from right direction and adjusting the position
-    else if(trampoline.detect_right_collision(player.bounding_ball())) {
-        player.position.x = trampoline.position.x + trampoline.radius + trampoline.width + player.radius;
+        // Detecting collision with trampoline from right direction and adjusting the position
+        else if(trampolines[i].detect_right_collision(player.bounding_ball())) {
+            player.position.x = trampolines[i].position.x + trampolines[i].radius + trampolines[i].width + player.radius;
+        }
     }
 
     // Detecting collision with spikes
-    for(int i=0;i<spikes.size();i++) {
-        if(spikes[i].detect_collision(player.bounding_ball())) {
-            spikes.erase(spikes.begin()+i);
-            i--;
+    if(level>2) {
+        for(int i=0;i<spikes.size();i++) {
+            if(spikes[i].detect_collision(player.bounding_ball(),player.speed_v)) {
+                spikes.erase(spikes.begin()+i);
+                score -= 15;
+                i--;
+            }
         }
     }
 
@@ -241,19 +285,23 @@ void tick_elements() {
         spikes[i].tick();
     }
 
-    if(pond.is_in_water(player.bounding_ball())) {
-        if(player.position.y <= pond.position.y-pond.radius + player.radius && player.position.x == pond.position.x) {
-            player.position.y = pond.position.y - pond.radius + player.radius;
+    in_water = false;
+    for(int i=0;i<ponds.size();i++) {
+        if(ponds[i].is_in_water(player.bounding_ball())) {
+            if(player.position.y <= ponds[i].position.y-ponds[i].radius + player.radius && player.position.x == ponds[i].position.x) {
+                player.position.y = ponds[i].position.y - ponds[i].radius + player.radius;
+            }
+            else if(ponds[i].is_out(player.bounding_ball())) {
+                player.position.x = ponds[i].set_x_boundary(player.bounding_ball());
+                player.speed_v = 0;
+            }
+            player.speed_h = 0;
+            in_water = true;
         }
-        else if(pond.is_out(player.bounding_ball())) {
-            player.position.x = pond.set_x_boundary(player.bounding_ball());
-            player.speed_v = 0;
-        }
-        player.speed_h = 0;
     }
 
     // If player is on ground setting the speed to zero and adjusting the height
-    else if(detect_ground(player.bounding_ball())) {
+    if(!in_water && detect_ground(player.bounding_ball())) {
         player.set_height(ground_level+player.radius);
         player.speed_v = 0;
         player.speed_h = 0;
@@ -270,6 +318,44 @@ bool detect_collision(bounding_ball_t player, bounding_ball_t ball, float speed)
             && player.y > ball.y && speed <= 0;
 }
 
+void generate_trampolines() {
+    trampolines.push_back(Trampoline(8,1,1.5,ground_level,0.2,COLOR_GREEN));
+    trampolines.push_back(Trampoline(30,1,1.5,ground_level,0.2,COLOR_GREEN));
+    trampolines.push_back(Trampoline(48,1,1.5,ground_level,0.2,COLOR_GREEN));
+}
+
+void generate_spikes() {
+    spikes.push_back(Spike(-7,ground_level,0.5,2,5,0.005,0.1,COLOR_YELLOW));
+    spikes.push_back(Spike(-2,ground_level+3,0.5,2,5,0.002,0.12,COLOR_YELLOW));
+    spikes.push_back(Spike(15,ground_level,0.5,2,5,0.007,0.1,COLOR_YELLOW));
+    spikes.push_back(Spike(18,ground_level,0.5,2,5,0.005,0.07,COLOR_YELLOW));
+    spikes.push_back(Spike(25,ground_level+5,0.5,2,5,0.005,0.2,COLOR_YELLOW));
+}
+
+void generate_ponds() {
+    ponds.push_back(Pond(-2,ground_level,2,0.5,COLOR_BLUE));
+    ponds.push_back(Pond(25,ground_level,2,0.5,COLOR_BLUE));
+    ponds.push_back(Pond(35,ground_level,2,0.5,COLOR_BLUE));
+}
+
+void generate_ball_types() {
+    // Generate types of Ball
+    // Add more later
+    flying_ball_t type1;
+    type1.color = COLOR_BLUE;
+    type1.speed = 0.04;
+    type1.score = 10;
+    ball_types.push_back(type1);
+    type1.color = COLOR_ORANGE;
+    type1.speed = 0.05;
+    type1.score = 20;
+    ball_types.push_back(type1);
+    type1.color = COLOR_VIOLET;
+    type1.speed = 0.06;
+    type1.score = 30;
+    ball_types.push_back(type1);
+}
+
 /* Initialize the OpenGL rendering properties */
 /* Add all the models to be created here */
 void initGL(GLFWwindow *window, int width, int height) {
@@ -282,36 +368,13 @@ void initGL(GLFWwindow *window, int width, int height) {
     color_t rainbowColors[] = {COLOR_VIOLET,COLOR_INDIGO,COLOR_BLUE,COLOR_GREEN,COLOR_YELLOW,COLOR_ORANGE,COLOR_RED};
     player = Player(2, ground_level + 0.3, 0.3, rainbowColors,7);
 
-    trampoline = Trampoline(8,1,1.5,ground_level,0.2,COLOR_GREEN);
-    Spike spike = Spike(-7,ground_level,0.5,2,5,0.005,0.1,COLOR_YELLOW);
-    spikes.push_back(spike);
-    pond = Pond(-2,ground_level,2,0.5,COLOR_BLUE);
+    generate_trampolines();
+    generate_spikes();
+    generate_ponds();
+    generate_ball_types();
+
     magnet = Magnet(-8,3,1,0.5,0.5,0.0005,3.0);
 
-
-    /*
-     *
-     *
-     *
-     *  Change this
-     *
-     *
-     *
-     *
-     */
-    // Generate types of Ball
-    // Add more later
-    flying_ball_t type1;
-    type1.color = COLOR_RED;
-    type1.speed = 0.05;
-    type1.score = 100;
-    ball_types.push_back(type1);
-    type1.color = COLOR_ORANGE;
-    type1.speed = 0.06;
-    ball_types.push_back(type1);
-    type1.color = COLOR_VIOLET;
-    type1.speed = 0.06;
-    ball_types.push_back(type1);
 
     // Create and compile our GLSL program from the shaders
     programID = LoadShaders("Sample_GL.vert", "Sample_GL.frag");
@@ -345,7 +408,6 @@ int main(int argc, char **argv) {
 
 
     /* Draw in loop */
-    int tag = 0;
     while (!glfwWindowShouldClose(window)) {
         // Process timers
 
@@ -357,16 +419,35 @@ int main(int argc, char **argv) {
             glfwSwapBuffers(window);
 
             if(t2.processTick()) generate_balls();
-            if(t5.processTick()) {
-                if(rand()%2) {
-                    magnet.activate(-8,3,0.0);
+            if(level>3) {
+                if(t5.processTick()) {
+                    if(rand()%2) {
+                        magnet.activate(-8,3,0.0);
+                    }
+                    else magnet.activate(8,3,180.0);
                 }
-                else magnet.activate(8,3,180.0);
             }
-            remove_balls(screen_width/2);
-            remove_slopes(screen_width/2);
+            remove_balls(2.5*screen_width);
+            remove_slopes(2.5*screen_width);
             tick_elements();
             tick_input(window);
+
+            string Result;
+            stringstream convert;
+            //cout << "nonedit score:" << score << endl;
+            convert << score;
+            Result = convert.str();
+
+            const char *one = "Score ";
+            const char *two = Result.c_str();
+            const char *three = "   Level ";
+            string Result1;
+            stringstream convert1;
+            convert1 << level;
+            Result1 = convert1.str();
+            const char *four = Result1.c_str();
+            string total( string(one) + two + string(three) + four);
+            glfwSetWindowTitle(window, total.c_str());
         }
 
         // Poll for Keyboard and mouse events
@@ -379,7 +460,11 @@ int main(int argc, char **argv) {
 /* Increses speed of the player by 0.3 when on ground */
 void jump_player() {
     jump = true;
-    if(player.position.y == ground_level + player.radius || pond.is_in_water(player.bounding_ball())) {
+    bool in_water = false;
+    for(int i=0;i<ponds.size();i++) {
+        if(ponds[i].is_in_water(player.bounding_ball())) in_water = true;
+    }
+    if(player.position.y == ground_level + player.radius || in_water) {
         player.speed_v = 0.3;
     }
 }
@@ -389,8 +474,8 @@ void jump_player() {
 void create_ground(float height) {
     float u_height = (height * 5.0)/6.0;
     float t_height = (height * 1.0)/6.0;
-    underGround = Ground(0, -screen_height/2 + u_height/2, u_height, screen_width, COLOR_BROWN);
-    foreGround   = Ground(0, -screen_height/2 + u_height + t_height/2, t_height, screen_width, COLOR_GREEN);
+    underGround = Ground(screen_width, -screen_height/2 + u_height/2, u_height, 3*screen_width, COLOR_BROWN);
+    foreGround   = Ground(screen_width, -screen_height/2 + u_height + t_height/2, t_height, 3*screen_width, COLOR_GREEN);
 }
 
 
@@ -416,7 +501,7 @@ void generate_balls() {
     Ball ball = Ball(x,y,radius,ball_t.color,ball_t.speed,ball_t.score);
 
     // Attach a slope randomly to the ball with probability of 0.2
-    if(rand()%5 == 0) {
+    if(level>1 && rand()%5 == 0) {
         int angle  = 30 + rand()%120;
 //        int angle = 45;
         float height = 3;
@@ -461,4 +546,14 @@ void reset_screen() {
 /* Function return true when the player collides with ground */
 bool detect_ground(bounding_ball_t player) {
     return player.y - player.radius <= ground_level ;
+}
+
+void zoom_out() {
+    screen_zoom -= 0.1;
+    reset_screen();
+}
+
+void zoom_in() {
+    screen_zoom += 0.1;
+    reset_screen();
 }

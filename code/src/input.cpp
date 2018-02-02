@@ -86,5 +86,11 @@ void mouseButton(GLFWwindow *window, int button, int action, int mods) {
 }
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
+    if(yoffset > 0) {
+        zoom_in();
+    }
+    if(yoffset < 0) {
+        zoom_out();
+    }
     // Do something
 }

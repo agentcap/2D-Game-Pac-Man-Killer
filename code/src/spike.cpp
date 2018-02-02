@@ -44,7 +44,7 @@ void Spike::tick() {
     else if (this->position.x < this->center.x) this->speed += range;
 }
 
-bool Spike::detect_collision(bounding_ball_t player) {
+bool Spike::detect_collision(bounding_ball_t player, float speed) {
     return (std::abs(this->position.x - player.x) <= player.radius + this->width/2) &&
-            (std::abs(this->position.y - player.y) <= player.radius + this->height);
+            (std::abs(this->position.y - player.y) <= player.radius + this->height) && speed <=0 ;
 }
