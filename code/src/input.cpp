@@ -41,6 +41,7 @@ void keyboard(GLFWwindow *window, int key, int scancode, int action, int mods) {
     } else if (action == GLFW_PRESS) {
         switch (key) {
         case GLFW_KEY_ESCAPE:
+        system("pkill canberra-gtk-pl");
             quit(window);
             break;
         case GLFW_KEY_SPACE:
@@ -57,6 +58,7 @@ void keyboardChar(GLFWwindow *window, unsigned int key) {
     switch (key) {
     case 'Q':
     case 'q':
+        system("pkill canberra-gtk-pl");
         quit(window);
         break;
     default:

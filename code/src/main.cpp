@@ -30,7 +30,7 @@ vector<Pond> ponds;
 Magnet magnet;
 
 int score = 0;
-int level = 5;
+int level = 1;
 
 // Types of Flying Balls
 vector<flying_ball_t> ball_types;
@@ -51,11 +51,17 @@ float ground_level = -screen_height/2+ground_height;
 bool moved_in_water = false;
 bool jump = false;
 
+bool water_sound = false;
+bool start = true;
 // t60  - Frame rate of the game
 // t2   - Ball Generation Rate
 Timer t60(1.0 / 60);
 Timer t2(1.0 /2);
-Timer t5(5.0);
+Timer t5(9.0);
+
+
+Timer magnet_timer(2.0);
+Timer bgm(20);
 
 /* Render the scene with openGL */
 /* Edit this function according to your assignment */
@@ -188,9 +194,9 @@ void tick_input(GLFWwindow *window) {
 }
 
 void tick_elements() {
-    if(score > 40) level = 2;
-    if(score > 80) level = 3;
-    if(score > 120) level = 4;
+    if(score > 100) level = 2;
+    if(score > 200) level = 3;
+    if(score > 300) level = 4;
 
     /*
      *
@@ -206,9 +212,14 @@ void tick_elements() {
             if(!jump)player.speed_v = -0.01;
             else player.speed_v = 0.2;
             in_water = true;
+            if(!water_sound) {
+                system(" canberra-gtk-play -f  ../music/resources/water.wav --volume=\"1\"   &");
+                water_sound = true;
+            }
         }
     }
     if(!in_water){
+        water_sound = false;
         jump = false;
         gravity = 0.01;
         player.speed_v -= gravity;
@@ -222,6 +233,8 @@ void tick_elements() {
             glm::vec3 temp = slopes[i].new_speed(player.speed_h,player.speed_v);
             player.speed_h = temp.x;
             player.speed_v = temp.y;
+            // Playing sound
+            system(" canberra-gtk-play -f  ../music/resources/rod.wav --volume=\"1\"   &");
         }
     }
 
@@ -237,7 +250,7 @@ void tick_elements() {
             i--;
 
             // Playing sound
-            system(" canberra-gtk-play -f  ../music/magnet.wav --volume=\"1\"   &");
+            system(" canberra-gtk-play -f  ../music/resources/ball_collision.wav --volume=\"1\"   &");
         }
     }
 
@@ -266,6 +279,8 @@ void tick_elements() {
                 spikes.erase(spikes.begin()+i);
                 score -= 15;
                 i--;
+                // Playing sound
+                system(" canberra-gtk-play -f  ../music/resources/porcupine.wav --volume=\"1\"   &");
             }
         }
     }
@@ -344,15 +359,15 @@ void generate_ball_types() {
     flying_ball_t type1;
     type1.color = COLOR_BLUE;
     type1.speed = 0.04;
-    type1.score = 10;
+    type1.score = 20;
     ball_types.push_back(type1);
     type1.color = COLOR_ORANGE;
     type1.speed = 0.05;
-    type1.score = 20;
+    type1.score = 30;
     ball_types.push_back(type1);
     type1.color = COLOR_VIOLET;
     type1.speed = 0.06;
-    type1.score = 30;
+    type1.score = 40;
     ball_types.push_back(type1);
 }
 
@@ -373,7 +388,7 @@ void initGL(GLFWwindow *window, int width, int height) {
     generate_ponds();
     generate_ball_types();
 
-    magnet = Magnet(-8,3,1,0.5,0.5,0.0005,3.0);
+    magnet = Magnet(-8,3,1,0.5,0.5,0.0005,5.0);
 
 
     // Create and compile our GLSL program from the shaders
@@ -410,6 +425,10 @@ int main(int argc, char **argv) {
     /* Draw in loop */
     while (!glfwWindowShouldClose(window)) {
         // Process timers
+        if(bgm.processTick()||start) {
+            start=false;
+            system(" canberra-gtk-play -f  ../music/resources/harpsi-cs.wav --volume=\"10\" &");
+        }
 
         if (t60.processTick()) {
             // 60 fps
@@ -421,6 +440,10 @@ int main(int argc, char **argv) {
             if(t2.processTick()) generate_balls();
             if(level>3) {
                 if(t5.processTick()) {
+                    if(magnet_timer.processTick()) {
+                        system(" canberra-gtk-play -f  ../music/resources/magnet.wav --volume=\"1\"   &");
+                    }
+
                     if(rand()%2) {
                         magnet.activate(-8,3,0.0);
                     }
